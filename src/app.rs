@@ -2,11 +2,11 @@ use eframe::egui::{self, FontId, RichText};
 
 use crate::components::video_grid::VideoGrid;
 
+//// Main application struct for the Cracking the Cryptic Tracker.
 pub struct CtcTrackerApp {
     error_message: Option<String>,
     video_grid: VideoGrid,
 }
-
 impl CtcTrackerApp {
     pub fn new() -> Self {
         let error_message = None;
@@ -24,7 +24,6 @@ impl CtcTrackerApp {
         }
     }
 }
-
 impl eframe::App for CtcTrackerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {

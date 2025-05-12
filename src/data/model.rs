@@ -1,5 +1,6 @@
 use sqlx::prelude::FromRow;
 
+/// Extracts puzzle links from the video description.
 pub fn extract_links_from_description(description: &str) -> Vec<String> {
     description
         .split_whitespace()
@@ -13,6 +14,7 @@ pub fn extract_links_from_description(description: &str) -> Vec<String> {
         .collect::<Vec<_>>()
 }
 
+/// Creates a YouTube URL from a video ID.
 pub fn youtube_url_from_id(id: &str) -> String {
     format!("https://www.youtube.com/watch?v={}", id)
 }
@@ -75,6 +77,7 @@ impl CtcVideo {
     }
 }
 
+/// Represents a row in the video data table.
 #[derive(FromRow)]
 pub struct CtcVideoRow {
     pub id: VideoId,

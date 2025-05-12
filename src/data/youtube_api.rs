@@ -12,17 +12,20 @@ use crate::data::model::CtcVideo;
 
 use super::model::VideoId;
 
+/// YouTube API client for fetching videos from the Cracking the Cryptic channel.
 #[derive(Clone)]
 pub struct YouTubeClient {
     api_key: String,
     pub hub: YouTube<HttpsConnector<HttpConnector>>,
 }
 impl YouTubeClient {
+    /// Creates a new instance of `YouTubeClient`.
     pub fn new(api_key: String) -> Self {
         let hub = get_hub();
         Self { api_key, hub }
     }
 
+    /// Fetches the channel page for the given channel ID.
     pub async fn get_channel_page(
         &self,
         channel_id: &str,
@@ -88,6 +91,7 @@ impl YouTubeClient {
     }
 }
 
+/// Creates a new YouTube hub instance.
 pub(crate) fn get_hub() -> YouTube<HttpsConnector<HttpConnector>> {
     let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
         .build(
@@ -101,10 +105,12 @@ pub(crate) fn get_hub() -> YouTube<HttpsConnector<HttpConnector>> {
     YouTube::new(client, NoToken)
 }
 
+/// Generates the upload playlist ID for a given channel ID.
 fn get_upload_playlist(channel_id: &str) -> String {
     format!("UU{}", channel_id.chars().skip(2).collect::<String>())
 }
 
+/// Extracts video IDs from the playlist items response.
 pub fn get_video_ids_from_playlist(playlist_items: &mut PlaylistItemListResponse) -> Vec<VideoId> {
     playlist_items
         .items

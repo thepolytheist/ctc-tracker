@@ -2,10 +2,12 @@ use sqlx::{migrate::MigrateDatabase, Executor};
 
 use super::model::{CtcVideo, CtcVideoCompletionRow, CtcVideoRow};
 
+/// YouTube database for storing video data and completion status.
 pub struct YoutubeDatabase {
     pub db: sqlx::SqlitePool,
 }
 impl YoutubeDatabase {
+    /// Creates a new instance of `YoutubeDatabase`.
     pub async fn new() -> Self {
         let db_path = dirs::config_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -99,20 +101,7 @@ impl YoutubeDatabase {
         Ok(())
     }
 
-    // pub async fn get_video_data(&self, video_id: &str) -> Result<Option<CtcVideo>, sqlx::Error> {
-    //     let result = sqlx::query_as::<_, CtcVideoRow>(
-    //         "SELECT id, title, description, date, duration FROM video_data WHERE id = ?",
-    //     )
-    //     .bind(video_id)
-    //     .fetch_optional(&self.db)
-    //     .await?;
-
-    //     match result {
-    //         Some(row) => Ok(Some(CtcVideo::from(row))),
-    //         None => Ok(None),
-    //     }
-    // }
-
+    /// Fetches all video data from the database.
     pub async fn get_all_video_data(&self) -> Result<Vec<CtcVideo>, sqlx::Error> {
         let rows = sqlx::query_as::<_, CtcVideoRow>(
             "SELECT id, title, description, date, duration FROM video_data",
@@ -125,19 +114,7 @@ impl YoutubeDatabase {
         Ok(videos)
     }
 
-    // pub async fn get_all_video_ids(&self) -> Result<Vec<String>, sqlx::Error> {
-    //     let rows = sqlx::query("SELECT id FROM video_data")
-    //         .fetch_all(&self.db)
-    //         .await?;
-
-    //     let video_ids = rows
-    //         .into_iter()
-    //         .map(|row| row.get::<String, _>(0))
-    //         .collect();
-
-    //     Ok(video_ids)
-    // }
-
+    /// Sets video data in the database.
     pub async fn set_video_data(
         &self,
         video_id: &str,

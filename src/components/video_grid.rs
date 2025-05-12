@@ -8,8 +8,10 @@ use crate::data::{
     youtube_api::YouTubeClient,
 };
 
-static CHANNEL_ID: &str = "UCC-UOdK8-mIjxBQm_ot1T-Q"; // Cracking the Cryptic
+/// YouTube channel ID for Cracking the Cryptic
+static CHANNEL_ID: &str = "UCC-UOdK8-mIjxBQm_ot1T-Q";
 
+/// Displays a list of videos from the Cracking the Cryptic YouTube channel with completion status.
 pub struct VideoGrid {
     pub videos: Vec<CtcVideo>,
     video_completion_statuses: HashMap<VideoId, bool>,
@@ -23,6 +25,7 @@ pub struct VideoGrid {
     api_key: Option<String>,
 }
 impl VideoGrid {
+    /// Creates a new instance of `VideoGrid`.
     pub fn new(api_key: String) -> Self {
         let videos = Vec::new();
         let mut video_completion_statuses = HashMap::new();
@@ -66,6 +69,7 @@ impl VideoGrid {
         }
     }
 
+    /// Loads videos from the Cracking the Cryptic YouTube channel.
     pub fn load_channel_videos(&mut self) {
         let sender = self.yt_sender.clone();
         let yt_client = YouTubeClient::new(self.api_key.clone().unwrap_or_default());
@@ -153,6 +157,7 @@ impl VideoGrid {
         });
     }
 
+    /// Updates the UI with the current state of the video grid.
     pub fn update(&mut self, ui: &mut egui::Ui) {
         if self.api_key.is_none() {
             ui.label(RichText::new("API key not set").strong());
