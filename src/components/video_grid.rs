@@ -85,90 +85,51 @@ impl VideoGrid {
         let video_completion_statuses = self.video_completion_statuses.clone();
         let yt_db = self.yt_db.clone();
         tokio::spawn(async move {
-            let mut result = yt_client.get_channel_page(CHANNEL_ID, None).await;
+            let mut next_page_token = None;
             let mut videos: Vec<CtcVideo> = vec![];
-
-            match result {
-                Ok(mut playlist_items) => {
-                    let mut get_next_page = true;
-
-                    // If we have any of the video IDs in the database, then we don't need to get the next page.
-                    let result_video_ids =
-                        crate::data::youtube_api::get_video_ids_from_playlist(&mut playlist_items);
-                    if result_video_ids
-                        .iter()
-                        .any(|id| video_completion_statuses.contains_key(id))
-                    {
-                        println!(
-                            "Page contains a video already in the database, skipping next fetch."
+            loop {
+                let mut get_next_page = true;
+                let result = yt_client
+                    .get_channel_page(CHANNEL_ID, next_page_token)
+                    .await;
+                match result {
+                    Ok(mut playlist_items) => {
+                        // If we have any of the video IDs in the database, then we don't need to get the next page.
+                        let result_video_ids =
+                            crate::data::youtube_api::get_video_ids_from_playlist(
+                                &mut playlist_items,
+                            );
+                        if result_video_ids
+                            .iter()
+                            .any(|id| video_completion_statuses.contains_key(id))
+                        {
+                            println!(
+                                "Page contains a video already in the database, skipping next fetch."
+                            );
+                            get_next_page = false;
+                        }
+                        videos.extend(
+                            yt_client
+                                .load_playist_videos(&mut playlist_items)
+                                .await
+                                .unwrap_or_else(|e: Box<dyn std::error::Error + Send + Sync>| {
+                                    eprintln!("Error loading videos from playlist: {}", e);
+                                    Vec::new()
+                                })
+                                .into_iter()
+                                .filter(|video| !video_completion_statuses.contains_key(&video.id))
+                                .collect::<Vec<_>>(),
                         );
-                        get_next_page = false;
-                    }
-                    videos.extend(
-                        yt_client
-                            .load_playist_videos(&mut playlist_items)
-                            .await
-                            .unwrap_or_else(|e: Box<dyn std::error::Error + Send + Sync>| {
-                                eprintln!("Error loading videos from playlist: {}", e);
-                                Vec::new()
-                            })
-                            .into_iter()
-                            .filter(|video| !video_completion_statuses.contains_key(&video.id))
-                            .collect::<Vec<_>>(),
-                    );
-                    println!("{} new videos loaded.", videos.len());
-                    let mut next_token = playlist_items.next_page_token.clone();
-                    while let Some(next_page_token) = next_token {
-                        if !get_next_page {
+                        println!("{} new videos loaded.", videos.len());
+                        next_page_token = playlist_items.next_page_token.clone();
+                        if !get_next_page || next_page_token.is_none() {
                             break;
                         }
-                        result = yt_client
-                            .get_channel_page(CHANNEL_ID, Some(next_page_token))
-                            .await;
-
-                        match result {
-                            Ok(mut next_playlist_items) => {
-                                next_token = next_playlist_items.next_page_token.clone();
-                                let next_video_ids =
-                                    crate::data::youtube_api::get_video_ids_from_playlist(
-                                        &mut next_playlist_items,
-                                    );
-                                if next_video_ids
-                                    .iter()
-                                    .any(|id| video_completion_statuses.contains_key(id))
-                                {
-                                    println!("Page contains a video already in the database, skipping next fetch.");
-                                    get_next_page = false;
-                                }
-                                videos.extend(
-                                    yt_client
-                                        .load_playist_videos(&mut next_playlist_items)
-                                        .await
-                                        .unwrap_or_else(|e| {
-                                            eprintln!(
-                                                "Error loading videos from next playlist page: {}",
-                                                e
-                                            );
-                                            Vec::new()
-                                        })
-                                        .into_iter()
-                                        .filter(|video| {
-                                            !video_completion_statuses.contains_key(&video.id)
-                                        })
-                                        .collect::<Vec<_>>(),
-                                );
-                                println!("{} new videos loaded.", videos.len());
-                            }
-                            Err(e) => {
-                                eprintln!("Error fetching next page of videos: {}", e);
-                                break;
-                            }
-                        }
                     }
-                }
-                Err(e) => {
-                    eprintln!("Error fetching initial channel page: {}", e);
-                    return;
+                    Err(e) => {
+                        eprintln!("Error fetching next page of videos: {}", e);
+                        break;
+                    }
                 }
             }
 

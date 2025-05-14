@@ -11,9 +11,7 @@ impl CtcTrackerApp {
         // Get API key from environment variable
         // TODO: Allow user to set API key in the UI
         let video_grid: VideoGrid = VideoGrid::new(std::env::var("CTC_API_KEY").ok(), db);
-        Self {
-            video_grid,
-        }
+        Self { video_grid }
     }
 }
 impl eframe::App for CtcTrackerApp {
