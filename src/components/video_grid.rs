@@ -17,6 +17,7 @@ pub struct VideoGrid {
     video_completion_statuses: HashMap<VideoId, bool>,
     pub show_completed_videos: bool,
     pub show_without_links: bool,
+    pub filter_text: String,
     yt_sender: std::sync::mpsc::Sender<Vec<CtcVideo>>,
     yt_receiver: std::sync::mpsc::Receiver<Vec<CtcVideo>>,
     completion_sender: std::sync::mpsc::Sender<HashMap<VideoId, bool>>,
@@ -40,6 +41,7 @@ impl VideoGrid {
             video_completion_statuses,
             show_completed_videos: false,
             show_without_links: false,
+            filter_text: String::new(),
             yt_sender,
             yt_receiver,
             completion_sender,
@@ -235,6 +237,12 @@ impl VideoGrid {
 
                     if !self.show_without_links && video.extracted_links.is_empty() {
                         continue; // Skip videos without links
+                    }
+
+                    if !self.filter_text.is_empty()
+                        && !video.title.to_lowercase().contains(&self.filter_text.to_lowercase())
+                    {
+                        continue; // Skip videos that don't match the filter
                     }
 
                     ui.label(&video.title);

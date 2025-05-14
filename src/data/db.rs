@@ -53,27 +53,6 @@ impl YoutubeDatabase {
         Self { db: pool }
     }
 
-    // pub async fn get_video_completion_status(&self, video_id: &str) -> Option<bool> {
-    //     let result = sqlx::query_as::<_, CtcVideoCompletionRow>(
-    //         "SELECT id, completed FROM video_completion WHERE id = ?",
-    //     )
-    //     .bind(video_id)
-    //     .fetch_optional(&self.db)
-    //     .await;
-
-    //     match result {
-    //         Ok(Some(row)) => Some(row.completed),
-    //         Ok(None) => None,
-    //         Err(e) => {
-    //             eprintln!(
-    //                 "Error fetching completion status for video {}: {}",
-    //                 video_id, e
-    //             );
-    //             None
-    //         }
-    //     }
-    // }
-
     pub async fn get_all_video_completion_statuses(
         &self,
     ) -> Result<Vec<CtcVideoCompletionRow>, sqlx::Error> {
