@@ -5,7 +5,11 @@ mod app;
 mod components;
 mod data;
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    // Initialize the database connection
+    let db = data::db::YoutubeDatabase::new().await;
+
     // Start egui
     let options = eframe::NativeOptions {
         viewport: ViewportBuilder {
@@ -17,6 +21,6 @@ fn main() {
     let _ = eframe::run_native(
         "Cracking the Cryptic Tracker",
         options,
-        Box::new(|_cc| Ok(Box::new(CtcTrackerApp::new()))),
+        Box::new(|_cc| Ok(Box::new(CtcTrackerApp::new(db)))),
     );
 }

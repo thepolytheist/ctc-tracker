@@ -30,8 +30,9 @@ impl YouTubeClient {
         &self,
         channel_id: &str,
         page_token: Option<String>,
-    ) -> Result<PlaylistItemListResponse, Box<dyn Error>> {
-        let mut request = self.hub
+    ) -> Result<PlaylistItemListResponse, Box<dyn Error + Send + Sync>> {
+        let mut request = self
+            .hub
             .playlist_items()
             .list(&vec!["snippet".into(), "contentDetails".into()])
             .playlist_id(&get_upload_playlist(channel_id))
@@ -55,16 +56,17 @@ impl YouTubeClient {
     pub async fn load_playist_videos(
         &self,
         playlist_items: &mut PlaylistItemListResponse,
-    ) -> Result<Vec<CtcVideo>, Box<dyn Error>> {
+    ) -> Result<Vec<CtcVideo>, Box<dyn Error + Send + Sync>> {
         let video_ids = get_video_ids_from_playlist(playlist_items);
         let mut video_data = Vec::<Video>::new();
 
         println!("Found {} videos in the playlist.", video_ids.len());
 
-        let mut video_list_call = self.hub
+        let mut video_list_call = self
+            .hub
             .videos()
             .list(&vec!["snippet".into(), "contentDetails".into()])
-            .param("key", &self.api_key.as_str());
+            .param("key", self.api_key.as_str());
 
         for video_id in &video_ids {
             video_list_call = video_list_call.add_id(video_id);

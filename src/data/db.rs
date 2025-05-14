@@ -3,6 +3,7 @@ use sqlx::{migrate::MigrateDatabase, Executor};
 use super::model::{CtcVideo, CtcVideoCompletionRow, CtcVideoRow};
 
 /// YouTube database for storing video data and completion status.
+#[derive(Clone)]
 pub struct YoutubeDatabase {
     pub db: sqlx::SqlitePool,
 }

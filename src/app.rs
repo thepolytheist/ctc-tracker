@@ -1,26 +1,18 @@
 use eframe::egui::{self, FontId, RichText};
 
-use crate::components::video_grid::VideoGrid;
+use crate::{components::video_grid::VideoGrid, data::db::YoutubeDatabase};
 
-//// Main application struct for the Cracking the Cryptic Tracker.
+/// Main application struct for the Cracking the Cryptic Tracker.
 pub struct CtcTrackerApp {
-    error_message: Option<String>,
     video_grid: VideoGrid,
 }
 impl CtcTrackerApp {
-    pub fn new() -> Self {
-        let error_message = None;
+    pub fn new(db: YoutubeDatabase) -> Self {
         // Get API key from environment variable
         // TODO: Allow user to set API key in the UI
-        if let Some(api_key) = std::env::var("CTC_API_KEY").ok() {
-            let video_grid = VideoGrid::new(api_key);
-
-            Self {
-                error_message,
-                video_grid,
-            }
-        } else {
-            panic!("CTC_API_KEY environment variable not set.");
+        let video_grid: VideoGrid = VideoGrid::new(std::env::var("CTC_API_KEY").ok(), db);
+        Self {
+            video_grid,
         }
     }
 }
@@ -56,20 +48,10 @@ impl eframe::App for CtcTrackerApp {
                         }
                     });
 
-                    if !self.video_grid.loading_videos
-                        && self.video_grid.videos.is_empty()
-                        && self.error_message.is_none()
-                    {
-                        println!("UI requesting video load...");
-                        self.video_grid.loading_videos = true;
-                        ui.label(RichText::new("Loading videos...").strong());
-                        self.video_grid.load_channel_videos();
-                    }
-
                     egui::scroll_area::ScrollArea::vertical()
                         .auto_shrink(false)
                         .show(ui, |ui| {
-                            self.video_grid.update(ui);
+                            self.video_grid.update(ui, ctx.clone());
                         });
                 },
             );
