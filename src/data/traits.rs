@@ -32,10 +32,11 @@ impl std::ops::DerefMut for VideoId {
     }
 }
 
+// TODO: This should probably be TryFrom instead of From.
 impl From<Video> for CtcVideo {
     fn from(video: Video) -> Self {
-        let snippet = video.snippet.unwrap();
-        let id = VideoId::new(&video.id.unwrap());
+        let snippet = video.snippet.unwrap_or_default();
+        let id = VideoId::new(&video.id.unwrap_or_default());
         let title = snippet.title.unwrap_or_default();
         let description = snippet.description.clone().unwrap_or_default();
         let date =
@@ -45,7 +46,7 @@ impl From<Video> for CtcVideo {
                 iso8601::Duration::from_str(
                     video
                         .content_details
-                        .unwrap()
+                        .unwrap_or_default()
                         .duration
                         .unwrap_or_default()
                         .as_str(),
