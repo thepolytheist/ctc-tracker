@@ -78,6 +78,16 @@ impl VideoGrid {
         });
     }
 
+    fn set_completion_status(&self, video_id: &VideoId, completed: bool) {
+        let db = self.yt_db.clone();
+        let video_id = video_id.clone();
+        tokio::spawn(async move {
+            if let Err(e) = db.set_video_completion_status(&video_id, completed).await {
+                eprintln!("Error updating completion status: {}", e);
+            }
+        });
+    }
+
     /// Loads videos from the Cracking the Cryptic YouTube channel.
     pub fn load_channel_videos(&mut self, ctx: egui::Context) {
         let sender = self.yt_sender.clone();
@@ -263,6 +273,7 @@ impl VideoGrid {
                         self.video_completion_statuses
                             .insert(video.id.clone(), checked);
                         // Update the database with the new completion status
+                        self.set_completion_status(&video.id, checked);
                     }
                     ui.end_row();
                 }
