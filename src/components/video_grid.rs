@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use eframe::egui::{self, RichText};
+use log::{debug, error, info};
 
 use crate::data::{
     db::YoutubeDatabase,
@@ -62,7 +63,7 @@ impl VideoGrid {
                 db.get_all_video_completion_statuses()
                     .await
                     .unwrap_or_else(|e| {
-                        eprintln!("Error fetching completion statuses: {}", e);
+                        error!("Error fetching completion statuses: {e}");
                         Vec::new()
                     });
 
@@ -83,7 +84,7 @@ impl VideoGrid {
         let video_id = video_id.clone();
         tokio::spawn(async move {
             if let Err(e) = db.set_video_completion_status(&video_id, completed).await {
-                eprintln!("Error updating completion status: {}", e);
+                error!("Error updating completion status: {e}");
             }
         });
     }
@@ -94,7 +95,8 @@ impl VideoGrid {
         let yt_client = YouTubeClient::new(self.api_key.clone().unwrap_or_default());
 
         // Spawn a new thread to fetch videos
-        let video_completion_statuses = self.video_completion_statuses.clone();
+        let known_video_ids: HashSet<VideoId> =
+            self.video_completion_statuses.keys().cloned().collect();
         let yt_db = self.yt_db.clone();
         tokio::spawn(async move {
             let mut next_page_token = None;
@@ -113,9 +115,9 @@ impl VideoGrid {
                             );
                         if result_video_ids
                             .iter()
-                            .any(|id| video_completion_statuses.contains_key(id))
+                            .any(|id| known_video_ids.contains(id))
                         {
-                            println!(
+                            debug!(
                                 "Page contains a video already in the database, skipping next fetch."
                             );
                             get_next_page = false;
@@ -125,34 +127,34 @@ impl VideoGrid {
                                 .load_playist_videos(&mut playlist_items)
                                 .await
                                 .unwrap_or_else(|e: Box<dyn std::error::Error + Send + Sync>| {
-                                    eprintln!("Error loading videos from playlist: {}", e);
+                                    error!("Error loading videos from playlist: {e}");
                                     Vec::new()
                                 })
                                 .into_iter()
-                                .filter(|video| !video_completion_statuses.contains_key(&video.id))
+                                .filter(|video| !known_video_ids.contains(&video.id))
                                 .collect::<Vec<_>>(),
                         );
-                        println!("{} new videos loaded.", videos.len());
+                        info!("{} new videos loaded.", videos.len());
                         next_page_token = playlist_items.next_page_token.clone();
                         if !get_next_page || next_page_token.is_none() {
                             break;
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error fetching next page of videos: {}", e);
+                        error!("Error fetching next page of videos: {e}");
                         break;
                     }
                 }
             }
 
             videos.extend(yt_db.get_all_video_data().await.unwrap_or_else(|e| {
-                eprintln!("Error fetching video data from database: {}", e);
+                error!("Error fetching video data from database: {e}");
                 Vec::new()
             }));
 
             for video in &videos {
                 // Write data to DB if not already present
-                if !video_completion_statuses.contains_key(&video.id) {
+                if !known_video_ids.contains(&video.id) {
                     if let Err(e) = yt_db
                         .set_video_data(
                             &video.id,
@@ -163,13 +165,10 @@ impl VideoGrid {
                         )
                         .await
                     {
-                        eprintln!("Error inserting video data into database: {}", e);
+                        error!("Error inserting video data into database: {e}");
                     }
                     if let Err(e) = yt_db.set_video_completion_status(&video.id, false).await {
-                        eprintln!(
-                            "Error inserting video completion status into database: {}",
-                            e
-                        );
+                        error!("Error inserting video completion status into database: {e}");
                     }
                 }
             }
@@ -177,7 +176,7 @@ impl VideoGrid {
             videos.sort_by(|a, b| a.duration.cmp(&b.duration));
 
             if sender.send(videos).is_err() {
-                eprintln!("Failed to send videos to main thread.");
+                error!("Failed to send videos to main thread.");
             }
             ctx.request_repaint(); // Request a repaint to update the UI
         });
@@ -250,7 +249,10 @@ impl VideoGrid {
                     }
 
                     if !self.filter_text.is_empty()
-                        && !video.title.to_lowercase().contains(&self.filter_text.to_lowercase())
+                        && !video
+                            .title
+                            .to_lowercase()
+                            .contains(&self.filter_text.to_lowercase())
                     {
                         continue; // Skip videos that don't match the filter
                     }

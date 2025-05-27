@@ -7,6 +7,7 @@ use google_youtube3::{
     hyper_util::{self, client::legacy::connect::HttpConnector},
     YouTube,
 };
+use log::{debug, error};
 
 use crate::data::model::CtcVideo;
 
@@ -46,7 +47,7 @@ impl YouTubeClient {
         match request.doit().await {
             Ok((_, response)) => Ok(response),
             Err(e) => {
-                eprintln!("Error fetching channel page: {}", e);
+                error!("Error fetching channel page: {e}");
                 Err(Box::new(e))
             }
         }
@@ -60,7 +61,7 @@ impl YouTubeClient {
         let video_ids = get_video_ids_from_playlist(playlist_items);
         let mut video_data = Vec::<Video>::new();
 
-        println!("Found {} videos in the playlist.", video_ids.len());
+        debug!("Found {} videos in the playlist.", video_ids.len());
 
         let mut video_list_call = self
             .hub

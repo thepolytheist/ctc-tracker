@@ -1,4 +1,7 @@
+use log::{debug, info};
 use sqlx::{migrate::MigrateDatabase, Executor};
+
+use crate::CONFIG_DIR;
 
 use super::model::{CtcVideo, CtcVideoCompletionRow, CtcVideoRow};
 
@@ -10,30 +13,22 @@ pub struct YoutubeDatabase {
 impl YoutubeDatabase {
     /// Creates a new instance of `YoutubeDatabase`.
     pub async fn new() -> Self {
-        let db_path = dirs::config_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("Cracking the Cryptic Tracker")
-            .join("ctc_tracker.db");
+        let db_path = CONFIG_DIR.join("db").join("ctc_tracker.db");
         let path = db_path
             .to_str()
             .expect("Config directory path should be valid.");
 
         // Initialize the SQLite database with sqlx
-        println!("Database path: {}", path);
-        if let Some(parent) = db_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent).expect("Failed to create config directory");
-            }
-        }
+        debug!("Database path: {}", path);
 
         if !sqlx::Sqlite::database_exists(path).await.unwrap_or(false) {
-            println!("Creating database {}", path);
+            info!("Creating database {path}");
             match sqlx::Sqlite::create_database(path).await {
-                Ok(_) => println!("Create db success"),
+                Ok(_) => info!("Create db success"),
                 Err(error) => panic!("error: {}", error),
             }
         } else {
-            println!("Database already exists");
+            info!("Database already exists");
         };
 
         let pool = sqlx::SqlitePool::connect(path).await.unwrap_or_else(|e| {

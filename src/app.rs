@@ -45,8 +45,7 @@ impl eframe::App for CtcTrackerApp {
                                 !self.video_grid.show_without_links;
                         }
                         ui.label(
-                            RichText::new("Filter videos by:")
-                                .font(FontId::proportional(16.)),
+                            RichText::new("Filter videos by:").font(FontId::proportional(16.)),
                         );
                         ui.text_edit_singleline(&mut self.video_grid.filter_text);
                     });
