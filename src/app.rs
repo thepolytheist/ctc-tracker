@@ -15,8 +15,10 @@ pub struct CtcTrackerApp {
 }
 impl CtcTrackerApp {
     pub fn new(db: YoutubeDatabase) -> Self {
-        // Try to get API key from environment variable first
-        let env_api_key = std::env::var("CTC_API_KEY").ok();
+        // Try to get API key from environment variable first, filtering out empty/whitespace values
+        let env_api_key = std::env::var("CTC_API_KEY")
+            .ok()
+            .filter(|key| !key.trim().is_empty());
 
         // Create a channel to receive the API key from the database
         let (sender, receiver) = std::sync::mpsc::channel();
@@ -52,7 +54,8 @@ impl eframe::App for CtcTrackerApp {
         if !self.api_key_loaded {
             if let Ok(db_api_key) = self.api_key_receiver.try_recv() {
                 self.api_key_loaded = true;
-                if let Some(api_key) = db_api_key {
+                // Filter out empty/whitespace API keys from the database
+                if let Some(api_key) = db_api_key.filter(|key| !key.trim().is_empty()) {
                     // API key found in database, use it
                     self.video_grid.set_api_key(Some(api_key));
                     self.setup_dialog = None; // No need for setup dialog
