@@ -76,6 +76,17 @@ impl eframe::App for CtcTrackerApp {
             return; // Don't show the main UI until setup is complete
         }
 
+        // Check if there's an API error and show settings dialog
+        if self.video_grid.api_error.is_some() && self.setup_dialog.is_none() {
+            // Open the settings dialog to let the user update their API key
+            if let Some(api_key) = self.video_grid.api_key.clone() {
+                self.setup_dialog = Some(SetupDialog::new_editing(
+                    self.video_grid.yt_db.clone(),
+                    api_key,
+                ));
+            }
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.with_layout(
                 egui::Layout::top_down_justified(egui::Align::Center),
@@ -108,7 +119,29 @@ impl eframe::App for CtcTrackerApp {
                             RichText::new("Filter videos by:").font(FontId::proportional(16.)),
                         );
                         ui.text_edit_singleline(&mut self.video_grid.filter_text);
+
+                        // Add settings button
+                        if ui.button("⚙ Settings").clicked() {
+                            if let Some(api_key) = self.video_grid.api_key.clone() {
+                                self.setup_dialog = Some(SetupDialog::new_editing(
+                                    self.video_grid.yt_db.clone(),
+                                    api_key,
+                                ));
+                            }
+                        }
                     });
+
+                    // Show error message if there's an API error
+                    if let Some(ref error) = self.video_grid.api_error {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new("⚠").color(egui::Color32::RED).font(FontId::proportional(20.)));
+                            ui.label(RichText::new(error).color(egui::Color32::RED).strong());
+                            if ui.button("Dismiss").clicked() {
+                                self.video_grid.api_error = None;
+                            }
+                        });
+                        ui.add_space(10.0);
+                    }
 
                     egui::scroll_area::ScrollArea::vertical()
                         .auto_shrink(false)

@@ -23,11 +23,14 @@ pub struct VideoGrid {
     yt_receiver: std::sync::mpsc::Receiver<Vec<CtcVideo>>,
     completion_sender: std::sync::mpsc::Sender<HashMap<VideoId, bool>>,
     completion_receiver: std::sync::mpsc::Receiver<HashMap<VideoId, bool>>,
-    yt_db: YoutubeDatabase,
+    error_sender: std::sync::mpsc::Sender<String>,
+    error_receiver: std::sync::mpsc::Receiver<String>,
+    pub yt_db: YoutubeDatabase,
     loading_completion: bool,
     completion_loaded: bool,
     loading_videos: bool,
-    api_key: Option<String>,
+    pub api_key: Option<String>,
+    pub api_error: Option<String>,
 }
 impl VideoGrid {
     /// Creates a new instance of `VideoGrid`.
@@ -36,6 +39,7 @@ impl VideoGrid {
         let video_completion_statuses = HashMap::new();
         let (yt_sender, yt_receiver) = std::sync::mpsc::channel();
         let (completion_sender, completion_receiver) = std::sync::mpsc::channel();
+        let (error_sender, error_receiver) = std::sync::mpsc::channel();
 
         Self {
             videos,
@@ -47,17 +51,22 @@ impl VideoGrid {
             yt_receiver,
             completion_sender,
             completion_receiver,
+            error_sender,
+            error_receiver,
             yt_db,
             loading_completion: false,
             completion_loaded: false,
             loading_videos: false,
             api_key,
+            api_error: None,
         }
     }
 
     /// Sets the API key for the video grid.
     pub fn set_api_key(&mut self, api_key: Option<String>) {
         self.api_key = api_key;
+        self.api_error = None; // Clear any previous errors when setting a new key
+        self.loading_videos = false; // Reset loading state to allow retry
     }
 
     /// Returns whether the video grid has an API key set.
@@ -115,6 +124,7 @@ impl VideoGrid {
         }
 
         let sender = self.yt_sender.clone();
+        let error_sender = self.error_sender.clone();
         let yt_client = YouTubeClient::new(api_key);
 
         // Spawn a new thread to fetch videos
@@ -164,7 +174,16 @@ impl VideoGrid {
                         }
                     }
                     Err(e) => {
-                        error!("Error fetching next page of videos: {e}");
+                        let error_msg = format!("Error fetching videos: {e}");
+                        error!("{error_msg}");
+
+                        // Check if it's an authentication/API key error
+                        let error_string = e.to_string();
+                        if error_string.contains("403") || error_string.contains("Forbidden") || error_string.contains("API key") {
+                            error_sender.send("Invalid API key. Please check your YouTube API key and try again.".to_string()).ok();
+                        } else {
+                            error_sender.send(error_msg).ok();
+                        }
                         break;
                     }
                 }
@@ -216,6 +235,11 @@ impl VideoGrid {
             self.video_completion_statuses = completion_statuses;
             self.loading_completion = false;
             self.completion_loaded = true;
+        }
+
+        if let Ok(error_msg) = self.error_receiver.try_recv() {
+            self.api_error = Some(error_msg);
+            self.loading_videos = false;
         }
 
         if let Ok(videos) = self.yt_receiver.try_recv() {
