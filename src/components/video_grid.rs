@@ -101,8 +101,15 @@ impl VideoGrid {
 
     /// Loads videos from the Cracking the Cryptic YouTube channel.
     pub fn load_channel_videos(&mut self, ctx: egui::Context) {
+        // Don't attempt to load videos if we don't have an API key
+        let Some(api_key) = self.api_key.clone() else {
+            error!("Attempted to load videos without an API key");
+            self.loading_videos = false;
+            return;
+        };
+
         let sender = self.yt_sender.clone();
-        let yt_client = YouTubeClient::new(self.api_key.clone().unwrap_or_default());
+        let yt_client = YouTubeClient::new(api_key);
 
         // Spawn a new thread to fetch videos
         let known_video_ids: HashSet<VideoId> =
