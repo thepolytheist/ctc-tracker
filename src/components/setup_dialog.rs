@@ -67,8 +67,9 @@ impl SetupDialog {
                             self.save_in_progress = true;
 
                             // Save the API key to the database
+                            let api_key_for_db = api_key.clone();
                             tokio::spawn(async move {
-                                if let Err(e) = db.set_api_key(&api_key).await {
+                                if let Err(e) = db.set_api_key(&api_key_for_db).await {
                                     error!("Error saving API key: {e}");
                                 }
                             });
