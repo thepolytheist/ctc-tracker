@@ -35,7 +35,7 @@ async fn main() {
     // Start egui
     let options = eframe::NativeOptions {
         viewport: ViewportBuilder {
-            inner_size: Some(egui::vec2(930.0, 720.0)),
+            inner_size: Some(egui::vec2(1200.0, 720.0)),
             ..Default::default()
         },
         ..Default::default()
