@@ -132,14 +132,18 @@ impl eframe::App for CtcTrackerApp {
                     });
 
                     // Show error message if there's an API error
-                    if let Some(ref error) = self.video_grid.api_error {
+                    if let Some(error) = self.video_grid.api_error.clone() {
+                        let mut dismiss = false;
                         ui.horizontal(|ui| {
                             ui.label(RichText::new("⚠").color(egui::Color32::RED).font(FontId::proportional(20.)));
-                            ui.label(RichText::new(error).color(egui::Color32::RED).strong());
+                            ui.label(RichText::new(&error).color(egui::Color32::RED).strong());
                             if ui.button("Dismiss").clicked() {
-                                self.video_grid.api_error = None;
+                                dismiss = true;
                             }
                         });
+                        if dismiss {
+                            self.video_grid.api_error = None;
+                        }
                         ui.add_space(10.0);
                     }
 
