@@ -45,6 +45,11 @@ impl YoutubeDatabase {
             .await
             .unwrap();
 
+        // Create the settings table if it doesn't exist
+        pool.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);")
+            .await
+            .unwrap();
+
         Self { db: pool }
     }
 
@@ -106,6 +111,29 @@ impl YoutubeDatabase {
         .bind(description)
         .bind(date)
         .bind(duration as i64)
+        .execute(&self.db)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Gets the API key from the database.
+    pub async fn get_api_key(&self) -> Result<Option<String>, sqlx::Error> {
+        let result = sqlx::query_as::<_, (String,)>(
+            "SELECT value FROM settings WHERE key = 'api_key'"
+        )
+        .fetch_optional(&self.db)
+        .await?;
+
+        Ok(result.map(|(value,)| value))
+    }
+
+    /// Sets the API key in the database.
+    pub async fn set_api_key(&self, api_key: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "INSERT INTO settings (key, value) VALUES ('api_key', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+        )
+        .bind(api_key)
         .execute(&self.db)
         .await?;
 

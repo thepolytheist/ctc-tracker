@@ -55,6 +55,16 @@ impl VideoGrid {
         }
     }
 
+    /// Sets the API key for the video grid.
+    pub fn set_api_key(&mut self, api_key: Option<String>) {
+        self.api_key = api_key;
+    }
+
+    /// Returns whether the video grid has an API key set.
+    pub fn has_api_key(&self) -> bool {
+        self.api_key.is_some()
+    }
+
     pub fn load_completion_data(&self, ctx: egui::Context) {
         let sender = self.completion_sender.clone();
         let db = self.yt_db.clone();
