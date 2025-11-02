@@ -2,7 +2,7 @@ use eframe::egui::{self, FontId, RichText};
 use log::error;
 
 use crate::{
-    components::{setup_dialog::SetupDialog, video_grid::VideoGrid},
+    components::{setup_dialog::{SetupDialog, SetupDialogResult}, video_grid::VideoGrid},
     data::db::YoutubeDatabase,
 };
 
@@ -68,12 +68,24 @@ impl eframe::App for CtcTrackerApp {
 
         // Show setup dialog if API key is not set
         if let Some(setup_dialog) = &mut self.setup_dialog {
-            if let Some(api_key) = setup_dialog.show(ctx) {
-                // User has entered an API key
-                self.video_grid.set_api_key(Some(api_key));
-                self.setup_dialog = None;
+            match setup_dialog.show(ctx) {
+                SetupDialogResult::Saved(api_key) => {
+                    // User has entered an API key
+                    self.video_grid.set_api_key(Some(api_key));
+                    self.setup_dialog = None;
+                }
+                SetupDialogResult::Cancelled => {
+                    // User cancelled - clear the error and close dialog
+                    self.video_grid.api_error = None;
+                    self.setup_dialog = None;
+                }
+                SetupDialogResult::Showing => {
+                    // Dialog still showing, don't show main UI for initial setup
+                    if !self.video_grid.has_api_key() {
+                        return;
+                    }
+                }
             }
-            return; // Don't show the main UI until setup is complete
         }
 
         // Check if there's an API error and show settings dialog
@@ -119,6 +131,11 @@ impl eframe::App for CtcTrackerApp {
                             RichText::new("Filter videos by:").font(FontId::proportional(16.)),
                         );
                         ui.text_edit_singleline(&mut self.video_grid.filter_text);
+
+                        // Add refresh button
+                        if ui.button("🔄 Refresh").clicked() {
+                            self.video_grid.refresh_videos();
+                        }
 
                         // Add settings button
                         if ui.button("⚙ Settings").clicked() {

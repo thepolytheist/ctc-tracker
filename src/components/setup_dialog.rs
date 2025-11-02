@@ -3,6 +3,17 @@ use log::error;
 
 use crate::data::db::YoutubeDatabase;
 
+/// Result of showing the setup dialog
+#[derive(Debug, Clone)]
+pub enum SetupDialogResult {
+    /// Dialog is still being shown
+    Showing,
+    /// User saved a new API key
+    Saved(String),
+    /// User cancelled the dialog
+    Cancelled,
+}
+
 /// Setup dialog for configuring the YouTube API key.
 pub struct SetupDialog {
     api_key_input: String,
@@ -49,14 +60,19 @@ impl SetupDialog {
         }
     }
 
-    /// Shows the setup dialog and returns whether the user has completed the setup.
-    pub fn show(&mut self, ctx: &egui::Context) -> Option<String> {
+    /// Shows the setup dialog and returns the result.
+    pub fn show(&mut self, ctx: &egui::Context) -> SetupDialogResult {
         if !self.show_dialog {
-            return None;
+            return if self.editing_mode {
+                SetupDialogResult::Cancelled
+            } else {
+                SetupDialogResult::Showing
+            };
         }
 
         let mut setup_complete = false;
         let mut api_key_to_return = None;
+        let mut was_cancelled = false;
 
         let window_title = if self.editing_mode {
             "Edit API Key"
@@ -130,6 +146,7 @@ impl SetupDialog {
                             if self.editing_mode {
                                 if ui.button("Cancel").clicked() {
                                     setup_complete = true;
+                                    was_cancelled = true;
                                 }
                             }
                         }
@@ -143,6 +160,12 @@ impl SetupDialog {
             self.show_dialog = false;
         }
 
-        api_key_to_return
+        if let Some(api_key) = api_key_to_return {
+            SetupDialogResult::Saved(api_key)
+        } else if was_cancelled {
+            SetupDialogResult::Cancelled
+        } else {
+            SetupDialogResult::Showing
+        }
     }
 }

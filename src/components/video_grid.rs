@@ -62,16 +62,22 @@ impl VideoGrid {
         }
     }
 
-    /// Sets the API key for the video grid.
+    /// Sets the API key for the video grid and triggers a refresh.
     pub fn set_api_key(&mut self, api_key: Option<String>) {
         self.api_key = api_key;
         self.api_error = None; // Clear any previous errors when setting a new key
-        self.loading_videos = false; // Reset loading state to allow retry
+        self.refresh_videos(); // Trigger a refresh with the new key
     }
 
     /// Returns whether the video grid has an API key set.
     pub fn has_api_key(&self) -> bool {
         self.api_key.is_some()
+    }
+
+    /// Resets the video loading state to trigger a refresh.
+    pub fn refresh_videos(&mut self) {
+        self.loading_videos = false;
+        self.videos.clear();
     }
 
     pub fn load_completion_data(&self, ctx: egui::Context) {
